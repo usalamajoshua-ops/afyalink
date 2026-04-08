@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AfyaLink - Anonymous Health Companion</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f9; }
+
+    header { position: relative; color: white; text-align: center; }
+
+    .hero { position: relative; height: 320px; overflow: hidden; }
+
+    .hero img {
+      width: 100%;
+      height: 320px;
+      object-fit: cover;
+      position: absolute;
+      opacity: 1;
+    }
+
+    .overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7));
+    }
+
+    .hero-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; animation: fadeIn 2s ease-in-out; }
+    .hero-text h1 { font-size: 42px; margin-bottom: 10px; font-weight: bold; }
+    .hero-text p { font-size: 18px; margin-bottom: 15px; }
+
+    .cta-btn { background: #2c7be5; padding: 12px 20px; border-radius: 25px; font-size: 16px; border: none; cursor: pointer; }
+    .cta-btn:hover { background: #1a5bb8; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -60%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+
+    nav { display: flex; justify-content: center; gap: 20px; background: #1a5bb8; padding: 10px; }
+    nav a { color: white; text-decoration: none; font-weight: bold; }
+
+    .container { padding: 20px; }
+
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+
+    button { background: #2c7be5; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin: 5px 0; }
+    .emergency { background: #e5533d; }
+
+    #chatbox { height: 220px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+    input { width: 75%; padding: 10px; }
+    .lang-select { position: absolute; top: 10px; right: 10px; }
+    .alert { background: #ffe0e0; padding: 10px; border-left: 5px solid red; margin-top: 10px; }
+
+    canvas { max-width: 100%; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hero">
+    <!-- Clearer high-res image of African youth learning/laughing -->
+    <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1600&q=80">
+    <div class="overlay"></div>
+
+    <div class="hero-text">
+      <h1 id="title">AfyaLink</h1>
+      <p id="subtitle">Ask anything. Stay anonymous. Get help.</p>
+      <button class="cta-btn" onclick="document.getElementById('chat').scrollIntoView({behavior:'smooth'})">Start Chat</button>
+    </div>
+
+    <select class="lang-select" onchange="changeLanguage(this.value)">
+      <option value="en">English</option>
+      <option value="rw">Kinyarwanda</option>
+      <option value="fr">Français</option>
+    </select>
+  </div>
+</header>
+
+<nav>
+  <a href="#chat">Chat</a>
+  <a href="#learn">Learn</a>
+  <a href="#help">Find Help</a>
+  
+</nav>
+
+<div class="container">
+
+  <div id="chat" class="card">
+    <h2>Anonymous Chat</h2>
+    <div id="chatbox"></div>
+    <input type="text" id="userInput" placeholder="Ask a question...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <div id="learn" class="card">
+    <h2>Quick Learning</h2>
+    <p id="myth">Myth or Fact: You cannot get pregnant the first time.</p>
+    <button onclick="checkAnswer()">Check Answer</button>
+  </div>
+
+  <div id="help" class="card">
+    <h2>Find Help Near You</h2>
+    <ul>
+      <li>Nyagatare Health Center</li>
+      <li>Kigali Mental Health Clinic</li>
+      <li>Youth Friendly Services - Musanze</li>
+    </ul>
+
+    <h3>🚨 Emergency Support</h3>
+    <button class="emergency" onclick="callNumber('3512')">📞 Call Isange One Stop Center (3512)</button>
+    <button class="emergency" onclick="callNumber('116')">📞 Report Child Misconduct (Police - 116)</button>
+  </div>
+
+  <!-- GOVERNMENT ANALYTICS (HIDDEN - LOGIN REQUIRED) -->
+  <div id="gov" class="card" style="display:none;">
+    <h2>📊 Government Insights (Anonymous Data)</h2>
+    <p>This dashboard uses anonymized chat signals to estimate unreported cases and trends by district.</p>
+    <canvas id="chart" height="120"></canvas>
+  </div>
+
+</div>
+
+<!-- GOV LOGIN BUTTON -->
+<button onclick="openLogin()" style="position:fixed;top:10px;left:10px;background:#222;color:white;padding:8px 12px;border-radius:20px;z-index:1000;">Gov Login</button>
+
+<!-- LOGIN MODAL -->
+<div id="loginModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);">
+  <div style="background:white;padding:20px;border-radius:10px;width:300px;margin:100px auto;text-align:center;">
+    <h3>Government Login</h3>
+    <input type="text" id="username" placeholder="Username" style="width:90%;margin:5px;padding:8px;"><br>
+    <input type="password" id="password" placeholder="Password" style="width:90%;margin:5px;padding:8px;"><br>
+    <button onclick="login()">Login</button>
+    <button onclick="closeLogin()">Cancel</button>
+    <p id="loginError" style="color:red;"></p>
+  </div>
+</div>
+
+<script>
+  // Mock district data (prototype)
+  let districtData = {
+    Kigali: 5,
+    Musanze: 2,
+    Rubavu: 3,
+    Huye: 4,
+    Nyagatare: 1
+  };
+
+  function updateChart() {
+    let canvas = document.getElementById('chart');
+    let ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    let keys = Object.keys(districtData);
+    let values = Object.values(districtData);
+
+    let barWidth = 50;
+    let gap = 30;
+
+    values.forEach((val, i) => {
+      let x = i * (barWidth + gap) + 40;
+      let y = 150 - val * 20;
+      ctx.fillRect(x, y, barWidth, val * 20);
+      ctx.fillText(keys[i], x, 170);
+    });
+  }
+
+  function sendMessage() {
+    let input = document.getElementById("userInput").value;
+    let chatbox = document.getElementById("chatbox");
+
+    if (!input) return;
+
+    chatbox.innerHTML += `<p><b>You:</b> ${input}</p>`;
+
+    let response = "I’m here to help. Can you tell me more?";
+
+    let riskKeywords = ["rape","abuse","forced","violence"];
+    let isRisk = riskKeywords.some(word => input.toLowerCase().includes(word));
+
+    if (isRisk) {
+      // simulate adding case to random district
+      let districts = Object.keys(districtData);
+      let randomDistrict = districts[Math.floor(Math.random()*districts.length)];
+      districtData[randomDistrict]++;
+      updateChart();
+    }
+
+    chatbox.innerHTML += `<p><b>AfyaLink:</b> ${response}</p>`;
+
+    if (isRisk) {
+      chatbox.innerHTML += `
+        <div class="alert">
+          ⚠️ Possible abuse detected. Seek immediate help:<br>
+          <button class="emergency" onclick="callNumber('3512')">📞 Call Isange</button>
+          <button class="emergency" onclick="callNumber('116')">📞 Call Police</button>
+        </div>`;
+    }
+
+    document.getElementById("userInput").value = "";
+    chatbox.scrollTop = chatbox.scrollHeight;
+  }
+
+  function checkAnswer() {
+    alert("Myth! Pregnancy can occur any time you have unprotected sex.");
+  }
+
+  function callNumber(number) {
+    window.location.href = "tel:" + number;
+  }
+
+  function openLogin() {
+    document.getElementById('loginModal').style.display = 'block';
+  }
+
+  function closeLogin() {
+    document.getElementById('loginModal').style.display = 'none';
+  }
+
+  function login() {
+    let user = document.getElementById('username').value;
+    let pass = document.getElementById('password').value;
+
+    // simple prototype credentials
+    if ((user === 'RIB' || user === 'RNP') && pass === 'admin123') {
+      document.getElementById('gov').style.display = 'block';
+      closeLogin();
+      document.getElementById('gov').scrollIntoView({behavior:'smooth'});
+    } else {
+      document.getElementById('loginError').innerText = 'Access denied';
+    }
+  }
+
+  function changeLanguage(lang) {
+    if (lang === 'rw') {
+      document.getElementById('subtitle').innerText = 'Baza icyo ushaka. Gumana ibanga. Fashwa.';
+    } else if (lang === 'fr') {
+      document.getElementById('subtitle').innerText = 'Posez vos questions. Restez anonyme. Obtenez de l’aide.';
+    } else {
+      document.getElementById('subtitle').innerText = 'Ask anything. Stay anonymous. Get help.';
+    }
+  }
+
+  updateChart();
+</script>
+
+</body>
+</html>
